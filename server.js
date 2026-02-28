@@ -94,23 +94,29 @@ io.on("connection", (socket) => {
     socket.on("leaveServer", () => leaveRoom(socket));
 
     socket.on("startGame", () => {
-        const room = rooms[socket.room];
-        if (!room || room.host !== socket.id) return;
+    const room = rooms[socket.room];
+    if (!room || room.host !== socket.id) return;
 
-        room.inGame = true;
-        room.grid = createGrid();
-        room.timer = GAME_DURATION;
+    // Clear any existing timer
+    if (room.timerInterval) clearInterval(room.timerInterval);
 
-        // spawn only players who were already in lobby
-        for (let id in room.players) {
-            const p = room.players[id];
-            p.inGame = true;
-        }
+    // Reset game state
+    room.inGame = true;
+    room.grid = createGrid();
+    room.timer = GAME_DURATION;
 
-        assignCorners(room);
-        io.to(socket.room).emit("gameStarted", room);
-        startTimer(socket.room);
-    });
+    // Set all players who were already in lobby to inGame
+    for (let id in room.players) {
+        const p = room.players[id];
+        p.inGame = true;
+    }
+
+    assignCorners(room);
+    io.to(socket.room).emit("gameStarted", room);
+
+    // Start the timer and save the interval so we can clear it next time
+    room.timerInterval = startTimer(socket.room);
+});
 
     socket.on("move", (direction) => {
         const room = rooms[socket.room];
@@ -261,3 +267,4 @@ server.listen(PORT, () => {
     console.log("Blockslide running on port " + PORT);
 
 });
+
