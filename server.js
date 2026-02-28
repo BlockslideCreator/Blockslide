@@ -94,29 +94,23 @@ io.on("connection", (socket) => {
     socket.on("leaveServer", () => leaveRoom(socket));
 
     socket.on("startGame", () => {
-    const room = rooms[socket.room];
-    if (!room || room.host !== socket.id) return;
+        const room = rooms[socket.room];
+        if (!room || room.host !== socket.id) return;
 
-    // Clear any existing timer
-    if (room.timerInterval) clearInterval(room.timerInterval);
+        room.inGame = true;
+        room.grid = createGrid();
+        room.timer = GAME_DURATION;
 
-    // Reset game state
-    room.inGame = true;
-    room.grid = createGrid();
-    room.timer = GAME_DURATION;
+        // spawn only players who were already in lobby
+        for (let id in room.players) {
+            const p = room.players[id];
+            p.inGame = true;
+        }
 
-    // Set all players who were already in lobby to inGame
-    for (let id in room.players) {
-        const p = room.players[id];
-        p.inGame = true;
-    }
-
-    assignCorners(room);
-    io.to(socket.room).emit("gameStarted", room);
-
-    // Start the timer and save the interval so we can clear it next time
-    room.timerInterval = startTimer(socket.room);
-});
+        assignCorners(room);
+        io.to(socket.room).emit("gameStarted", room);
+        startTimer(socket.room);
+    });
 
     socket.on("move", (direction) => {
         const room = rooms[socket.room];
@@ -236,10 +230,8 @@ function leaveRoom(socket, disconnect = false) {
 }
 
 function startTimer(code) {
-    const room = rooms[code];
-    if (!room) return;
-
     const interval = setInterval(() => {
+        const room = rooms[code];
         if (!room || !room.inGame) {
             clearInterval(interval);
             return;
@@ -254,15 +246,10 @@ function startTimer(code) {
             clearInterval(interval);
         }
     }, 1000);
-
-    return interval; // Save interval in room.timerInterval
 }
 
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
     console.log("Blockslide running on port " + PORT);
-
 });
-
-
