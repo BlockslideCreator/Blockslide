@@ -230,10 +230,17 @@ function leaveRoom(socket, disconnect = false) {
 }
 
 function startTimer(code) {
-    const interval = setInterval(() => {
-        const room = rooms[code];
+    const room = rooms[code];
+    if (!room) return;
+
+    // Clear existing timer if it exists
+    if (room.interval) {
+        clearInterval(room.interval);
+    }
+
+    room.interval = setInterval(() => {
         if (!room || !room.inGame) {
-            clearInterval(interval);
+            clearInterval(room.interval);
             return;
         }
 
@@ -242,8 +249,8 @@ function startTimer(code) {
 
         if (room.timer <= 0) {
             room.inGame = false;
+            clearInterval(room.interval);
             io.to(code).emit("gameEnded", room);
-            clearInterval(interval);
         }
     }, 1000);
 }
@@ -252,4 +259,5 @@ const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
     console.log("Blockslide running on port " + PORT);
+
 });
